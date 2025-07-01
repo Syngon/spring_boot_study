@@ -29,20 +29,3 @@ public class AddressDTO {
     private String region;
 }
 
-/*
-{
-    cep: "41612-405"
-    logradouro: "Rua Desembargador João Azevedo Cavalcante"
-    complemento: ""
-    unidade: ""
-    bairro: "Jardim Placaford"
-    localidade: "Salvador"
-    uf: "BA"
-    estado: "Bahia"
-    regiao: "Nordeste"
-    ibge: "2927408"
-    gia: ""
-    ddd: "71"
-    siafi: "3849"
-}
- */
