@@ -8,8 +8,6 @@ import org.springframework.data.mongodb.repository.Query;
 import java.util.List;
 
 public interface OrderRepository extends MongoRepository<Order, String> {
-    Order findByDescription(String description);
-    Order findByCustomerId(String customerId);
     List<Order> findAllByCustomerId(String customerId);
     List<Order> findByPriceGreaterThan(Integer price);
     List<Order> findByStatus(OrderStatus status);
