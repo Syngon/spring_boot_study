@@ -12,6 +12,6 @@ public class OrderRequest {
     private String description;
     private Integer price;
     private OrderStatus status;
-    private Long customerId;
+    private String customerId;
 
 }

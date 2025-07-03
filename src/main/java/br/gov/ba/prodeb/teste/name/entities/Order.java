@@ -29,7 +29,7 @@ public class Order {
     private String description;
     private Integer price;
     private OrderStatus status;
-    private Long customerId;
+    private String customerId;
     private @Null Customer customer;
     @CreatedDate
     private Instant createdAt;

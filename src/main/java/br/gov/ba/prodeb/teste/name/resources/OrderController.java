@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 public class OrderController {
@@ -23,13 +24,15 @@ public class OrderController {
 
     @PostMapping("/orders")
     public ResponseEntity<?> createOrder(@RequestBody OrderRequest body) {
-        if (customerRepository.findById(body.getCustomerId()) == null) {
-            return new ResponseEntity<>("Usuario nao encontrado", HttpStatus.NOT_FOUND);
+        Optional<Customer> optionalCustomer = customerRepository.findById(body.getCustomerId());
+        if (optionalCustomer.isEmpty()) {
+            return new ResponseEntity<>("Cliente nao encontrado", HttpStatus.NOT_FOUND);
         }
 
+        Customer customer = optionalCustomer.get();
         Order orderToSave = new Order(body);
         Order createdOrder = orderRepository.save(orderToSave);
-        Order createdOrderWithCustomer =  this.setOrderCustomer(createdOrder);
+        Order createdOrderWithCustomer =  this.setOrderCustomer(createdOrder, customer);
         return ResponseEntity.ok(createdOrderWithCustomer);
     }
 
@@ -45,30 +48,43 @@ public class OrderController {
     }
 
     @GetMapping("/orders/{id}")
-    public ResponseEntity<?>  orderById(@PathVariable Long id) {
-        Order order = orderRepository.findById(id);
-        Order orderWithCustomer = this.setOrderCustomer(order);
+    public ResponseEntity<?>  orderById(@PathVariable String id) {
+        Optional<Order> optionalOrder = orderRepository.findById(id);
+        if (optionalOrder.isEmpty()) {
+            return new ResponseEntity<>("Compra nao encontrada", HttpStatus.NOT_FOUND);
+        }
+
+        Customer customer = customerRepository.findById(optionalOrder.get().getCustomerId())
+                .orElseThrow(() -> new RuntimeException("Cliente nao encontrado"));
+
+        Order order = optionalOrder.get();
+        Order orderWithCustomer = this.setOrderCustomer(order, customer);
         return ResponseEntity.ok(orderWithCustomer);
     }
 
     @GetMapping("/orders/customer/{customerId}")
-    public ResponseEntity<?> ordersByCustomerName(@PathVariable Long customerId) {
+    public ResponseEntity<?> ordersByCustomerId(@PathVariable String customerId) {
+        Customer customer = customerRepository.findById(customerId)
+                .orElseThrow(() -> new RuntimeException("Cliente nao encontrado"));
+
         List<Order> orderList =  orderRepository
                 .findAllByCustomerId(customerId)
                 .stream()
-                .map(this::setOrderCustomer)
+                .map(o -> this.setOrderCustomer(o, customer))
                 .toList();
 
         return ResponseEntity.ok(orderList);
     }
 
     @GetMapping("/orders/customer/{customerId}/details")
-    public ResponseEntity<?> orderDetailsById(@PathVariable Long customerId) {
+    public ResponseEntity<?> orderDetailsById(@PathVariable String customerId) {
         List<Order> orders = orderRepository.findAllByCustomerId(customerId);
-
         if (orders.isEmpty()) {
             return new ResponseEntity<>("Nenhuma compra encontrada para esse usuario", HttpStatus.NOT_FOUND);
         }
+
+        Customer customer = customerRepository.findById(customerId)
+                .orElseThrow(() -> new RuntimeException("Cliente nao encontrado"));
 
         int totalOrders = orders.size();
         int totalPrice =
@@ -81,7 +97,7 @@ public class OrderController {
                 "customerId", customerId,
                 "totalPrice", totalPrice,
                 "totalOrders", totalOrders,
-                "orders", orders.stream().map(this::setOrderCustomer).toList(),
+                "orders", orders.stream().map(o -> this.setOrderCustomer(o, customer)).toList(),
                 "customer", customerRepository.findById(customerId)
         );
 
@@ -109,11 +125,52 @@ public class OrderController {
         return ResponseEntity.ok(orders);
     }
 
+    @GetMapping("/orders/descriptions-and-prices/customer/{customerId}/desc")
+    public ResponseEntity<List<Order>> descriptionsAndPricesByCustomerId(@PathVariable String customerId) {
+        Customer customer = customerRepository.findById(customerId)
+                .orElseThrow(() -> new RuntimeException("Cliente nao encontrado"));
+
+        List<Order> orders = orderRepository.findDescriptionsAndPricesByCustomerIdOrderByPricesDesc(customerId)
+                .stream()
+                .map(o -> this.setOrderCustomer(o, customer))
+                .toList();
+
+        return ResponseEntity.ok(orders);
+    }
+
+    @GetMapping("/orders/status/{status}/customer/{customerId}")
+    public ResponseEntity<List<Order>> ordersByStatusAndCustomer(@PathVariable String status, @PathVariable String customerId) {
+        Customer customer = customerRepository.findById(customerId)
+                .orElseThrow(() -> new RuntimeException("Cliente nao encontrado"));
+
+        OrderStatus orderStatus = OrderStatus.valueOf(status.toUpperCase());
+        List<Order> orders = orderRepository.findByStatusAndCustomerId(orderStatus, customerId)
+                .stream()
+                .map(o -> this.setOrderCustomer(o, customer))
+                .toList();
+    return ResponseEntity.ok(orders);
+    }
+
+    @GetMapping("/orders/customer/{customerId}/this-month")
+    public ResponseEntity<List<Order>> ordersThisWeekByCustomer(@PathVariable String customerId) {
+        Customer customer = customerRepository.findById(customerId)
+                .orElseThrow(() -> new RuntimeException("Cliente nao encontrado"));
+
+        List<Order> orders = orderRepository.findOrdersCreatedThisMonthByCustomer(customerId)
+                .stream()
+                .map(o -> this.setOrderCustomer(o, customer))
+                .toList();
+
+        return ResponseEntity.ok(orders);
+    }
+
     private Order setOrderCustomer(Order order, Customer customer) {
         return order.setCustomer(customer);
     }
+
     private Order setOrderCustomer(Order order) {
-        Customer customer = customerRepository.findById(order.getCustomerId());
-        return order.setCustomer(customer);
+        Customer customer = customerRepository.findById(order.getCustomerId())
+                .orElseThrow(() -> new RuntimeException("Cliente nao encontrado"));
+        return this.setOrderCustomer(order, customer);
     }
 }
