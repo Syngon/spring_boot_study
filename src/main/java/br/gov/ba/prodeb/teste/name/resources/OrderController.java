@@ -19,6 +19,7 @@ import java.util.Map;
 public class OrderController {
     @Autowired
     private OrderRepository orderRepository;
+
     @Autowired
     private CustomerRepository customerRepository;
 
@@ -45,7 +46,7 @@ public class OrderController {
     }
 
     @GetMapping("/orders/{id}")
-    public ResponseEntity<?>  orderById(@PathVariable String id) {
+    public ResponseEntity<?> orderById(@PathVariable String id) {
         Order order = this.getOrder(id);
         Customer customer = this.getCustomer(order.getCustomerId());
         Order orderWithCustomer = this.setOrderCustomer(order, customer);
@@ -132,7 +133,7 @@ public class OrderController {
     }
 
     @GetMapping("/orders/customer/{customerId}/this-month")
-    public ResponseEntity<List<Order>> ordersThisWeekByCustomer(@PathVariable String customerId) {
+    public ResponseEntity<List<Order>> ordersThisMonthByCustomer(@PathVariable String customerId) {
         Customer customer = this.getCustomer(customerId);
         List<Order> orders = orderRepository.findOrdersCreatedThisMonthByCustomer(customerId)
                 .stream()
